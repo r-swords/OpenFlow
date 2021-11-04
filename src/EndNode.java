@@ -9,11 +9,13 @@ public class EndNode extends Node {
 
     Terminal terminal;
     InetSocketAddress dstAddress;
+    boolean waiting;
 
     EndNode (String name, int srcPort){
         try {
             terminal = new Terminal(name);
             socket = new DatagramSocket(srcPort);
+            waiting = false;
             switch(name){
                 case("e1"):
                     dstAddress = new InetSocketAddress("localhost", 50004);
@@ -31,22 +33,33 @@ public class EndNode extends Node {
         }
     }
 
+    public void waiting(){
+        waiting = true;
+        while(waiting){
+            String quit = terminal.read("Enter 'quit' to stop listening");
+            if(quit.equalsIgnoreCase("quit")) waiting = false;
+        }
+    }
+
     public void start() throws IOException {
         while(true) {
-            String message = terminal.read("Send message: ");
-            terminal.print("Send message: " + message);
-            byte[] messageArray = message.getBytes(StandardCharsets.UTF_8);
-            DatagramPacket sendPacket = new DatagramPacket(messageArray, messageArray.length, dstAddress);
-            socket.send(sendPacket);
+            String message = terminal.read("Send message, or enter 'WAITING': ");
+            terminal.println("Send message, or enter 'WAITING': " + message);
+            if(message.equalsIgnoreCase("waiting")) waiting();
+            else {
+                DatagramPacket sendPacket = createPacket(MESSAGE, message, dstAddress);
+                socket.send(sendPacket);
+            }
         }
     }
 
     @Override
     public void onReceipt(DatagramPacket packet) {
-        byte[] messageArray = packet.getData();
-        String message = new String(messageArray).trim();
-        String[] print = message.split("/");
-        terminal.println(print[1]);
+        if(waiting) {
+            String message = getMessage(packet);
+            String[] print = message.split("/");
+            terminal.println(print[1]);
+        }
     }
 
     public static void main(String[] args) {

@@ -5,7 +5,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.concurrent.ForkJoinPool;
 
 public class Router extends Node{
     Terminal terminal;
@@ -20,7 +19,7 @@ public class Router extends Node{
             switch(name){
                 case("r1"):
                     table.add(new RouteNode(new InetSocketAddress("localhost", 50001), "e2", new InetSocketAddress("localhost", 50006)));
-                    table.add(new RouteNode(new InetSocketAddress("localhost", 50001), "e3", new InetSocketAddress("localhost", 50006)));
+                    table.add(new RouteNode(new InetSocketAddress("localhost", 50001), "e3", new InetSocketAddress("localhost", 50008)));
                     table.add(new RouteNode(new InetSocketAddress("localhost", 50008), "e1", new InetSocketAddress("localhost", 50001)));
                     table.add(new RouteNode(new InetSocketAddress("localhost", 50007), "e1", new InetSocketAddress("localhost", 50001)));
                     break;
@@ -41,7 +40,7 @@ public class Router extends Node{
                     table.add(new RouteNode(new InetSocketAddress("localhost", 50004), "e3", new InetSocketAddress("localhost", 50003)));
                     table.add(new RouteNode(new InetSocketAddress("localhost", 50007), "e3", new InetSocketAddress("localhost", 50003)));
                     table.add(new RouteNode(new InetSocketAddress("localhost", 50003), "e2", new InetSocketAddress("localhost", 50006)));
-                    table.add(new RouteNode(new InetSocketAddress("localhost", 50006), "e1", new InetSocketAddress("localhost", 50004)));
+                    table.add(new RouteNode(new InetSocketAddress("localhost", 50003), "e1", new InetSocketAddress("localhost", 50004)));
             }
         } catch (SocketException e) {
             e.printStackTrace();
@@ -55,12 +54,12 @@ public class Router extends Node{
     @Override
     public void onReceipt(DatagramPacket packet) throws IOException {
         terminal.println("Received packet");
-        byte[] messageArray = packet.getData();
-        String message = new String(messageArray).trim();
+        String message = getMessage(packet);
         String[] stArr = message.split("/");
         for(RouteNode i: table){
-            if(i.dest.equals(stArr[0]) && i.source.equals((InetSocketAddress) packet.getSocketAddress())){
-                DatagramPacket sendPacket = new DatagramPacket(message.getBytes(StandardCharsets.UTF_8), message.getBytes(StandardCharsets.UTF_8).length, i.nextAddress);
+            if(i.dest.equals(stArr[0]) &&
+                    i.source.equals((InetSocketAddress) packet.getSocketAddress())){
+                DatagramPacket sendPacket = createPacket(MESSAGE, message, i.nextAddress);
                 socket.send(sendPacket);
                 break;
             }
