@@ -9,6 +9,9 @@ import java.util.concurrent.CountDownLatch;
 public abstract class Node {
     static final int PACKETSIZE = 65536;
     static final byte MESSAGE = 1;
+    static final byte WAITING = 2;
+    static final byte ROUTE_REQUEST = 3;
+    static final byte ROUTE_RESPONSE = 4;
 
 
     DatagramSocket socket;
@@ -29,17 +32,16 @@ public abstract class Node {
         return new String(messageArray).trim();
     }
 
-    public DatagramPacket createPacket(byte type, String message, InetSocketAddress dstAddress) {
-        byte[] data = new byte[message.length() + 2];
+    public DatagramPacket createPacket(byte type, byte[] message, InetSocketAddress dstAddress) {
+        byte[] data = new byte[message.length + 2];
         data[0] = type;
-        data[1] = (byte) message.length();
-        byte[] messageArray = message.getBytes(StandardCharsets.UTF_8);
-        System.arraycopy(messageArray,0, data, 2, messageArray.length);
+        data[1] = (byte) message.length;
+        System.arraycopy(message,0, data, 2, message.length);
         return new DatagramPacket(data, data.length, dstAddress);
     }
 
 
-    public abstract void onReceipt(DatagramPacket packet) throws IOException;
+    public abstract void onReceipt(DatagramPacket packet) throws IOException, ClassNotFoundException, InterruptedException;
 
     /**
      *
