@@ -15,29 +15,24 @@ public class EndNode extends Node {
         try {
             terminal = new Terminal(name);
             socket = new DatagramSocket(srcPort);
+            dstAddress = new InetSocketAddress(socket.getLocalAddress().getHostName(), 51510);
             waiting = false;
-            switch(name){
-                case("e1"):
-                    dstAddress = new InetSocketAddress("localhost", 50004);
-                    break;
-                case("e2"):
-                    dstAddress = new InetSocketAddress("localhost", 50005);
-                    break;
-                case("e3"):
-                    dstAddress = new InetSocketAddress("localhost", 50008);
-                    break;
-            }
             listener.go();
         } catch (SocketException e) {
             e.printStackTrace();
         }
     }
 
-    public void waiting(){
-        waiting = true;
+    public void waiting() throws IOException {
+        DatagramPacket packet = createPacket(WAITING, "waiting".getBytes(StandardCharsets.UTF_8), dstAddress);
+        socket.send(packet);
         while(waiting){
             String quit = terminal.read("Enter 'quit' to stop listening");
-            if(quit.equalsIgnoreCase("quit")) waiting = false;
+            if(quit.equalsIgnoreCase("quit")){
+                packet = createPacket(WAITING, "quit".getBytes(StandardCharsets.UTF_8), dstAddress);
+                socket.send(packet);
+                waiting = false;
+            }
         }
     }
 
@@ -47,8 +42,10 @@ public class EndNode extends Node {
             terminal.println("Send message, or enter 'WAITING': " + message);
             if(message.equalsIgnoreCase("waiting")) waiting();
             else {
-                DatagramPacket sendPacket = createPacket(MESSAGE, message, dstAddress);
+                DatagramPacket sendPacket = createPacket(MESSAGE, message.getBytes(StandardCharsets.UTF_8), dstAddress);
+                System.out.println("print");
                 socket.send(sendPacket);
+                System.out.println("print2");
             }
         }
     }
@@ -64,7 +61,7 @@ public class EndNode extends Node {
 
     public static void main(String[] args) {
         try {
-            (new EndNode(args[0], Integer.parseInt(args[1]))).start();
+            (new EndNode(args[0], 50000)).start();
         }
         catch (IOException e){
             e.printStackTrace();
