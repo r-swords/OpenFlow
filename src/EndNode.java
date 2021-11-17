@@ -11,11 +11,11 @@ public class EndNode extends Node {
     InetSocketAddress dstAddress;
     boolean waiting;
 
-    EndNode (String name, int srcPort){
+    EndNode (String name){
         try {
             terminal = new Terminal(name);
-            socket = new DatagramSocket(srcPort);
-            dstAddress = new InetSocketAddress(socket.getLocalAddress().getHostName(), 51510);
+            socket = new DatagramSocket(50000);
+            dstAddress = new InetSocketAddress(name, 51510);
             waiting = false;
             listener.go();
         } catch (SocketException e) {
@@ -26,6 +26,7 @@ public class EndNode extends Node {
     public void waiting() throws IOException {
         DatagramPacket packet = createPacket(WAITING, "waiting".getBytes(StandardCharsets.UTF_8), dstAddress);
         socket.send(packet);
+        waiting = true;
         while(waiting){
             String quit = terminal.read("Enter 'quit' to stop listening");
             if(quit.equalsIgnoreCase("quit")){
@@ -61,7 +62,7 @@ public class EndNode extends Node {
 
     public static void main(String[] args) {
         try {
-            (new EndNode(args[0], 50000)).start();
+            (new EndNode(args[0])).start();
         }
         catch (IOException e){
             e.printStackTrace();

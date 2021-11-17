@@ -13,6 +13,7 @@ public class Controller extends Node {
         try {
             terminal = new Terminal("Controller");
             socket = new DatagramSocket(51510);
+            listener.go();
             table = new ArrayList<>();
             table.add(new RouteNode(new InetSocketAddress("e1", 50000), "e2", new InetSocketAddress("r1", 51510), new InetSocketAddress("e1", 51510)));
             table.add(new RouteNode(new InetSocketAddress("e1", 50000), "e3", new InetSocketAddress("r1", 51510), new InetSocketAddress("e1", 51510)));
@@ -41,23 +42,26 @@ public class Controller extends Node {
         }
     }
 
-    public void findRoute(RouteNode node){
+    public synchronized void findRoute(RouteNode node, DatagramPacket packet){
         for(RouteNode i : table){
             if(i.dest.equals(node.dest) && i.source.equals(node.source) && i.currentAddress.equals(node.currentAddress)){
-                sendRoute(i);
+                sendRoute(i, packet);
                 break;
             }
         }
     }
 
-    public void sendRoute(RouteNode node){
+    public synchronized void sendRoute(RouteNode node, DatagramPacket packet){
         try {
             terminal.println("send packet");
             ByteArrayOutputStream outStream = new ByteArrayOutputStream();
             ObjectOutput output = new ObjectOutputStream(outStream);
             output.writeObject(node);
             output.close();
-            byte[] packetData = outStream.toByteArray();
+            byte[] data = outStream.toByteArray();
+            byte[] packetData = new byte[data.length+1];
+            packetData[0] = packet.getData()[2];
+            System.arraycopy(data,0,packetData,1,data.length);
             DatagramPacket send = createPacket(ROUTE_RESPONSE, packetData, node.currentAddress);
             socket.send(send);
         }
@@ -67,18 +71,26 @@ public class Controller extends Node {
 
     }
 
+    public synchronized void start() throws InterruptedException {
+        terminal.println("waiting");
+        while(true){
+            this.wait();
+        }
+    }
+
     @Override
-    public void onReceipt(DatagramPacket packet) throws IOException{
+    public synchronized void onReceipt(DatagramPacket packet) throws IOException{
         terminal.println("Received packet");
         byte[] data = packet.getData();
-        byte[] object = new byte[data[1]];
-        System.arraycopy(data,2,object,0,object.length);
+        byte[] object = new byte[data.length - 3];
+        System.arraycopy(data,3,object,0,object.length);
+        byte[] h = new byte[1];
         if(data[0] == ROUTE_REQUEST){
             try {
                 ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(object));
                 RouteNode request = (RouteNode) inputStream.readObject();
                 inputStream.close();
-                findRoute(request);
+                findRoute(request, packet);
             }
             catch (ClassNotFoundException e){
                 e.printStackTrace();
@@ -86,7 +98,7 @@ public class Controller extends Node {
         }
     }
 
-    public static void main(String[] args) throws IOException {
-        new Controller();
+    public static void main(String[] args) throws IOException, InterruptedException {
+        new Controller().start();
     }
 }
