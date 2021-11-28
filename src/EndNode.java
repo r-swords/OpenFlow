@@ -27,12 +27,14 @@ public class EndNode extends Node {
         DatagramPacket packet = createPacket(WAITING, "waiting".getBytes(StandardCharsets.UTF_8), dstAddress);
         socket.send(packet);
         waiting = true;
+        terminal.println("Waiting request sent.\n------\n");
         while(waiting){
             String quit = terminal.read("Enter 'quit' to stop listening");
             if(quit.equalsIgnoreCase("quit")){
                 packet = createPacket(WAITING, "quit".getBytes(StandardCharsets.UTF_8), dstAddress);
                 socket.send(packet);
                 waiting = false;
+                terminal.println("Stopped waiting.\n------\n");
             }
         }
     }
@@ -43,10 +45,14 @@ public class EndNode extends Node {
             terminal.println("Send message, or enter 'WAITING': " + message);
             if(message.equalsIgnoreCase("waiting")) waiting();
             else {
-                DatagramPacket sendPacket = createPacket(MESSAGE, message.getBytes(StandardCharsets.UTF_8), dstAddress);
-                System.out.println("print");
-                socket.send(sendPacket);
-                System.out.println("print2");
+                String[] split1 = message.split("/");
+                String[] split2 =  split1[0].split("&");
+                for(String i : split2) {
+                    String sendString = i + "/" + split1[1];
+                    DatagramPacket sendPacket = createPacket(MESSAGE, sendString.getBytes(StandardCharsets.UTF_8), dstAddress);
+                    socket.send(sendPacket);
+                }
+                terminal.println("Message sent.\n------\n");
             }
         }
     }
@@ -56,7 +62,7 @@ public class EndNode extends Node {
         if(waiting) {
             String message = getMessage(packet);
             String[] print = message.split("/");
-            terminal.println(print[1]);
+            terminal.println("Message received: " + print[1] + "\n------\n");
         }
     }
 

@@ -1,4 +1,4 @@
-import java.io.IOException;
+import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
@@ -12,6 +12,7 @@ public abstract class Node {
     static final byte WAITING = 2;
     static final byte ROUTE_REQUEST = 3;
     static final byte ROUTE_RESPONSE = 4;
+    static final byte REMOVE = 5;
 
 
     DatagramSocket socket;
@@ -38,6 +39,33 @@ public abstract class Node {
         data[1] = (byte) message.length;
         System.arraycopy(message,0, data, 2, message.length);
         return new DatagramPacket(data, data.length, dstAddress);
+    }
+
+    public byte[] createRouteNodeArray(RouteNode node){
+        try {
+            ByteArrayOutputStream outStream = new ByteArrayOutputStream();
+            ObjectOutput output = new ObjectOutputStream(outStream);
+            output.writeObject(node);
+            output.close();
+            return outStream.toByteArray();
+        }
+        catch (IOException e){
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public RouteNode extractNode(byte[] data){
+        try {
+            ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(data));
+            RouteNode node = (RouteNode) inputStream.readObject();
+            inputStream.close();
+            return node;
+        }
+        catch (IOException | ClassNotFoundException e){
+            e.printStackTrace();
+            return null;
+        }
     }
 
 
